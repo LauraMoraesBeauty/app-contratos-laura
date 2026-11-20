@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 from docx import Document
 from io import BytesIO
 from datetime import datetime
@@ -12,10 +13,9 @@ st.set_page_config(page_title="Gerador de Contratos - Laura Moraes", page_icon="
 # Criamos colunas para deixar a logo centralizada e num tamanho elegante
 col_vazia1, col_logo, col_vazia2 = st.columns([1, 2, 1])
 with col_logo:
-    try:
-        # Puxando a logo com o nome real
+    if os.path.exists("logo_marca.png"):
         st.image("logo_marca.png", use_column_width=True)
-    except FileNotFoundError:
+    else:
         st.info("📌 O arquivo 'logo_marca.png' não foi encontrado na pasta.")
 
 # ==========================================
@@ -23,11 +23,10 @@ with col_logo:
 # ==========================================
 with st.sidebar:
     st.header("📸 Portfólio / Inspirações")
-    try:
-        # Puxando a foto com o nome real
-        st.image("capa_noiva.jpg", caption="Laura Moraes Beauty")
-    except FileNotFoundError:
-        st.info("📌 O arquivo 'capa_noiva.jpg' não foi encontrado na pasta.")
+    if os.path.exists("capa_noiva.png"):
+        st.image("capa_noiva.png", caption="Laura Moraes Beauty")
+    else:
+        st.info("📌 O arquivo 'capa_noiva.png' não foi encontrado na pasta.")
 # ==========================================
 
 # Dicionário de meses para a data automática em português
