@@ -11,27 +11,67 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. ESTÉTICA PREMIUM ---
+# --- 2. ESTÉTICA PREMIUM (COM CONTRASTE REFORÇADO) ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@300;400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;500;600&display=swap');
     
     .stApp { background-color: #FCFBF9; }
-    html, body, [class*="css"] { font-family: 'Montserrat', sans-serif; color: #4A3B39; }
-    h1, h2, h3, h4 { font-family: 'Playfair Display', serif !important; color: #3D2C2A !important; }
+    
+    /* Cor base mais escura para textos gerais */
+    html, body, [class*="css"] { 
+        font-family: 'Montserrat', sans-serif; 
+        color: #241B19 !important; 
+    }
+    
+    h1, h2, h3, h4 { 
+        font-family: 'Playfair Display', serif !important; 
+        color: #1F1615 !important; 
+    }
     
     [data-testid="stForm"] {
-        background-color: #FFFFFF; border: 1px solid #EBE4E2;
-        border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04); padding: 2rem;
+        background-color: #FFFFFF; 
+        border: 1px solid #DFD6D3;
+        border-radius: 12px; 
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); 
+        padding: 2rem;
+    }
+
+    /* Rótulos dos campos (Nome completo, CPF, Telefone, etc.) mais escuros e nítidos */
+    label, .stTextInput label, .stSelectbox label, .stRadio label, [data-testid="stWidgetLabel"] p {
+        color: #1F1615 !important;
+        font-weight: 600 !important;
+        font-size: 0.92rem !important;
+    }
+
+    /* Texto digitado dentro das caixas e opções do rádio (PDF / Word) */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div, .stRadio div[role="radiogroup"] label p {
+        color: #1A1413 !important;
+        font-weight: 500 !important;
+    }
+
+    /* Caixas de texto com borda mais visível */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div { 
+        background-color: #F7F5F4 !important; 
+        border: 1px solid #B8AEAB !important; 
+        border-radius: 6px; 
     }
     
+    /* Botão Principal */
     div.stButton > button:first-child {
-        background-color: #C2A39E; color: white; border-radius: 8px;
-        border: none; padding: 12px 24px; font-weight: 500; width: 100%;
+        background-color: #B08E88; 
+        color: #FFFFFF !important; 
+        border-radius: 8px;
+        border: none; 
+        padding: 12px 24px; 
+        font-weight: 600; 
+        width: 100%;
         transition: all 0.3s ease;
     }
-    div.stButton > button:first-child:hover { background-color: #A68782; color: white; }
-    .stTextInput input, .stSelectbox select { background-color: #FAFAFA; border: 1px solid #E0DCDA; border-radius: 6px; }
+    div.stButton > button:first-child:hover { 
+        background-color: #91716B; 
+        color: #FFFFFF !important; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -134,17 +174,13 @@ if submit:
         
         try:
             with st.spinner(f"Processando contrato em {formato_arquivo}..."):
-                # 1. Gera o Word base sempre
                 doc_preenchido = preencher_contrato("template_contrato.docx", dados_noiva)
                 nome_arquivo = nome.replace(' ', '_')
                 temp_docx = f"temp_{nome_arquivo}.docx"
                 doc_preenchido.save(temp_docx)
                 
-                # 2. Lógica baseada na escolha
                 if formato_arquivo == "PDF":
                     temp_pdf = f"Contrato_{nome_arquivo}.pdf"
-                    
-                    # Comando específico para converter PDF na nuvem (usando LibreOffice nativo do servidor)
                     subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', temp_docx])
                     
                     with open(temp_pdf, "rb") as pdf_file:
@@ -173,7 +209,6 @@ if submit:
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 
-                # Limpa o arquivo docx temporário em ambos os casos
                 if os.path.exists(temp_docx): 
                     os.remove(temp_docx)
                     
