@@ -1,215 +1,164 @@
 import streamlit as st
 from docx import Document
-import os
-import re
-import subprocess
+from io import BytesIO
+from datetime import datetime
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(
-    page_title="Contratos | Laura Moraes Beauty",
-    page_icon=":sparkles:", 
-    layout="centered"
-)
+# Configuração da página
+st.set_page_config(page_title="Gerador de Contratos - Laura Moraes Beauty", page_icon="✨", layout="centered")
 
-# --- 2. ESTÉTICA PREMIUM (COM CONTRASTE REFORÇADO) ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Montserrat:wght@400;500;600&display=swap');
-    
-    .stApp { background-color: #FCFBF9; }
-    
-    html, body, [class*="css"] { 
-        font-family: 'Montserrat', sans-serif; 
-        color: #241B19 !important; 
-    }
-    
-    h1, h2, h3, h4 { 
-        font-family: 'Playfair Display', serif !important; 
-        color: #1F1615 !important; 
-    }
-    
-    [data-testid="stForm"] {
-        background-color: #FFFFFF; 
-        border: 1px solid #DFD6D3;
-        border-radius: 12px; 
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05); 
-        padding: 2rem;
-    }
+# Dicionário de meses para a data automática em português
+MESES = {
+    1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
+    5: "maio", 6: "junho", 7: "julho", 8: "agosto",
+    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"
+}
 
-    label, .stTextInput label, .stSelectbox label, .stRadio label, [data-testid="stWidgetLabel"] p {
-        color: #1F1615 !important;
-        font-weight: 600 !important;
-        font-size: 0.92rem !important;
-    }
+def formatar_moeda(valor):
+    """Formata número para o padrão de moeda brasileiro (ex: 2.500,00)"""
+    return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div, .stRadio div[role="radiogroup"] label p {
-        color: #1A1413 !important;
-        font-weight: 500 !important;
-    }
-
-    .stTextInput input, .stSelectbox div[data-baseweb="select"] > div { 
-        background-color: #F7F5F4 !important; 
-        border: 1px solid #B8AEAB !important; 
-        border-radius: 6px; 
-    }
-    
-    div.stButton > button:first-child {
-        background-color: #B08E88; 
-        color: #FFFFFF !important; 
-        border-radius: 8px;
-        border: none; 
-        padding: 12px 24px; 
-        font-weight: 600; 
-        width: 100%;
-        transition: all 0.3s ease;
-    }
-    div.stButton > button:first-child:hover { 
-        background-color: #91716B; 
-        color: #FFFFFF !important; 
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# --- 3. IDENTIDADE VISUAL ---
-col_logo1, col_logo2, col_logo3 = st.columns([1, 3, 1])
-with col_logo2:
-    try:
-        st.image("logo_marca.png", use_container_width=True)
-    except FileNotFoundError:
-        pass
-
-try:
-    st.image("capa_noiva.png", use_container_width=True)
-except FileNotFoundError:
-    st.info("Dica: Salve uma foto da sua produção como 'capa_noiva.png' e sua logo como 'logo_marca.png' na mesma pasta deste arquivo.")
-
-st.markdown("<h2 style='text-align: center; margin-top: 10px;'>Gerador de Contratos</h2>", unsafe_allow_html=True)
-st.write("") 
-
-# --- FUNÇÕES DE PROCESSAMENTO ---
-def remover_caracteres_estranhos(texto):
-    if isinstance(texto, str):
-        return re.sub(r'[\ud800-\udfff]', '', texto)
-    return texto
-
-def preencher_contrato(template_path, dados):
-    doc = Document(template_path)
+def substituir_tags(doc, dicionario_tags):
+    """Substitui as tags no documento preservando a formatação (parágrafos e tabelas)"""
+    # Substituir em parágrafos normais
     for p in doc.paragraphs:
-        texto_paragrafo = p.text
-        tem_tag = any(key in texto_paragrafo for key in dados.keys())
-        if tem_tag:
-            texto_limpo = remover_caracteres_estranhos(texto_paragrafo)
-            for key, value in dados.items():
-                if key in texto_limpo:
-                    texto_limpo = texto_limpo.replace(key, remover_caracteres_estranhos(value))
-            p.text = texto_limpo
-    return doc
+        for tag, valor in dicionario_tags.items():
+            if tag in p.text:
+                # O replace direto no text perde formatação fina, mas para tags inteiras 
+                # costuma funcionar bem. Para garantir, substituímos no texto do parágrafo.
+                p.text = p.text.replace(tag, str(valor))
+                
+    # Substituir em tabelas (como a tabela de assinaturas)
+    for tabela in doc.tables:
+        for linha in tabela.rows:
+            for celula in linha.cells:
+                for p in celula.paragraphs:
+                    for tag, valor in dicionario_tags.items():
+                        if tag in p.text:
+                            p.text = p.text.replace(tag, str(valor))
 
-# --- FORMULÁRIO ---
+# Cabeçalho do App
+st.title("✨ Emissor de Contratos")
+st.subheader("Laura Moraes Beauty")
+st.markdown("---")
+
+# Formulário de Preenchimento
 with st.form("form_contrato"):
-    st.markdown("#### 📋 Dados da Noiva")
-    nome = st.text_input("Nome completo")
-    colA, colB = st.columns(2)
-    with colA:
-        cpf = st.text_input("CPF")
-        telefone = st.text_input("Telefone")
-    with colB:
+    st.header("👰 Dados da Contratante")
+    col1, col2 = st.columns(2)
+    with col1:
+        nome_noiva = st.text_input("Nome da Noiva", placeholder="Ex: Ana Carolina Silva")
+        nacionalidade = st.text_input("Nacionalidade", value="brasileira")
+        estado_civil = st.selectbox("Estado Civil", ["solteira", "casada", "divorciada", "viúva"])
         profissao = st.text_input("Profissão")
+    with col2:
+        cpf = st.text_input("CPF")
         email = st.text_input("E-mail")
-    endereco = st.text_input("Endereço Completo")
-    
-    st.markdown("---")
-    st.markdown("#### 💍 Dados do Evento")
-    colC, colD = st.columns(2)
-    with colC:
-        data_casamento = st.text_input("Data (ex: 15/01/2028)")
-    with colD:
-        horario = st.text_input("Horário (ex: 14h00)")
-    local = st.text_input("Local da Produção")
-    pacote = st.selectbox("Pacote Escolhido", ["Exclusive Bride", "Complete Bride", "Classic Bride"])
-    
-    st.markdown("---")
-    st.markdown("#### 💰 Financeiro")
-    valor_total = st.text_input("Valor Total (ex: 3.600,00)")
-    colE, colF = st.columns(2)
-    with colE:
-        sinal = st.text_input("Sinal - 30% (ex: 1.080,00)")
-    with colF:
-        saldo = st.text_input("Saldo Restante - 70% (ex: 2.520,00)")
-        
-    st.markdown("---")
-    st.markdown("#### 📄 Formato de Exportação")
-    formato_arquivo = st.radio("Como deseja baixar o contrato final?", ["PDF", "Word (.docx)"], horizontal=True)
-    
-    st.write("")
-    submit = st.form_submit_button("Gerar Contrato")
+        telefone = st.text_input("Telefone / WhatsApp")
+        endereco = st.text_input("Endereço Completo")
 
-# --- GERAÇÃO ---
-if submit:
-    if not nome or not cpf:
-        st.error("Preencha Nome e CPF.")
-    else:
-        dados_noiva = {
-            "{{NOME_NOIVA}}": nome,
-            "{{CPF}}": cpf,
-            "{{PROFISSAO}}": profissao,
-            "{{EMAIL}}": email,
-            "{{TELEFONE}}": telefone,
-            "{{ENDERECO}}": endereco,
-            "{{DATA_CASAMENTO}}": data_casamento,
-            "{{LOCAL}}": local,
-            "{{HORARIO}}": horario,
-            "{{PACOTE}}": pacote,
-            "{{VALOR_TOTAL}}": valor_total,
-            "{{SINAL}}": sinal,
-            "{{SALDO}}": saldo
-        }
+    st.markdown("---")
+    st.header("📍 Dados do Evento")
+    col3, col4 = st.columns(2)
+    with col3:
+        data_casamento = st.text_input("Data do Casamento", placeholder="Ex: 15 de novembro de 2027")
+        horario = st.text_input("Horário da Cerimônia", placeholder="Ex: 15:30")
+    with col4:
+        local = st.text_input("Local da Produção (Making of)", placeholder="Ex: Hotel Jatiúca, Quarto 201")
+        cidade_evento = st.text_input("Cidade / Município do Evento", value="Maceió/AL")
+
+    st.markdown("---")
+    st.header("💄 Pacote e Valores")
+    
+    pacote = st.selectbox("Pacote Escolhido", [
+        "I – CLASSIC BRIDE", 
+        "II – COMPLETE BRIDE", 
+        "III – EXCLUSIVE BRIDE"
+    ])
+    
+    horas_acompanhamento = st.text_input(
+        "Horas de Acompanhamento (Apenas para Exclusive Bride)", 
+        value="02 (duas) horas",
+        help="Altere apenas se negociar um tempo diferente."
+    )
+    
+    # Valores
+    valor_total = st.number_input("Valor Total (R$)", min_value=0.0, value=0.0, step=100.0)
+    
+    # Cálculo automático do Sinal (30%) e Saldo (70%)
+    sinal_calc = valor_total * 0.30
+    saldo_calc = valor_total * 0.70
+    
+    col5, col6 = st.columns(2)
+    with col5:
+        st.info(f"**Sinal (30%):** R$ {formatar_moeda(sinal_calc)}")
+    with col6:
+        st.info(f"**Saldo (70%):** R$ {formatar_moeda(saldo_calc)}")
         
+    observacoes = st.text_area(
+        "Observações / Adicionais Específicos", 
+        value="Nenhum adicional contratado.",
+        help="Ex: Inclui taxa de deslocamento para São Miguel dos Milagres."
+    )
+
+    submit_button = st.form_submit_button(label="Gerar Contrato 📝")
+
+# Lógica de Geração do Documento
+if submit_button:
+    if not nome_noiva or not cpf:
+        st.error("⚠️ Por favor, preencha pelo menos o Nome e o CPF da noiva.")
+    else:
         try:
-            with st.spinner(f"Processando contrato em {formato_arquivo}..."):
-                doc_preenchido = preencher_contrato("template_contrato.docx", dados_noiva)
-                nome_arquivo = nome.strip().replace(' ', '_')
+            # Puxar a data automática do dia da geração do contrato
+            hoje = datetime.now()
+            data_emissao_formatada = f"{hoje.day} de {MESES[hoje.month]} de {hoje.year}"
+            
+            # Mapeamento das tags que estão no Word
+            tags = {
+                "{{NOME_NOIVA}}": nome_noiva.strip(),
+                "{{NACIONALIDADE}}": nacionalidade.strip(),
+                "{{ESTADO_CIVIL}}": estado_civil.strip(),
+                "{{PROFISSAO}}": profissao.strip(),
+                "{{CPF}}": cpf.strip(),
+                "{{EMAIL}}": email.strip(),
+                "{{TELEFONE}}": telefone.strip(),
+                "{{ENDERECO}}": endereco.strip(),
                 
-                # Nomes dos arquivos temporários e finais alinhados
-                temp_docx = f"temp_{nome_arquivo}.docx"
-                temp_pdf_gerado = f"temp_{nome_arquivo}.pdf"
-                nome_final_pdf = f"Contrato_{nome_arquivo}.pdf"
-                nome_final_docx = f"Contrato_{nome_arquivo}.docx"
+                "{{DATA_CASAMENTO}}": data_casamento.strip(),
+                "{{HORARIO}}": horario.strip(),
+                "{{LOCAL}}": local.strip(),
+                "{{CIDADE_EVENTO}}": cidade_evento.strip(),
                 
-                doc_preenchido.save(temp_docx)
+                "{{PACOTE}}": pacote,
+                "{{HORAS_ACOMPANHAMENTO}}": horas_acompanhamento.strip(),
+                "{{VALOR_TOTAL}}": formatar_moeda(valor_total),
+                "{{SINAL}}": formatar_moeda(sinal_calc),
+                "{{SALDO}}": formatar_moeda(saldo_calc),
+                "{{OBSERVACOES}}": observacoes.strip(),
                 
-                if formato_arquivo == "PDF":
-                    # O LibreOffice converte temp_X.docx -> temp_X.pdf
-                    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', temp_docx], check=True)
-                    
-                    with open(temp_pdf_gerado, "rb") as pdf_file:
-                        file_bytes = pdf_file.read()
-                        
-                    st.success(f"Contrato de {nome} gerado com sucesso em PDF!")
-                    st.download_button(
-                        label="⬇️ Baixar Contrato (PDF)", 
-                        data=file_bytes, 
-                        file_name=nome_final_pdf, 
-                        mime="application/pdf"
-                    )
-                    
-                    if os.path.exists(temp_pdf_gerado): 
-                        os.remove(temp_pdf_gerado)
-                    
-                else: 
-                    with open(temp_docx, "rb") as docx_file:
-                        file_bytes = docx_file.read()
-                        
-                    st.success(f"Contrato de {nome} gerado com sucesso em Word!")
-                    st.download_button(
-                        label="⬇️ Baixar Contrato (Word)", 
-                        data=file_bytes, 
-                        file_name=nome_final_docx, 
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                
-                if os.path.exists(temp_docx): 
-                    os.remove(temp_docx)
-                    
+                "{{DATA_EMISSAO}}": data_emissao_formatada
+            }
+
+            # Carregar o documento Word base
+            doc = Document("template_contrato.docx")
+            
+            # Substituir as tags
+            substituir_tags(doc, tags)
+            
+            # Salvar em memória (BytesIO) para download
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+            
+            st.success("✅ Contrato gerado com sucesso!")
+            
+            # Botão de Download
+            st.download_button(
+                label="⬇️ Baixar Contrato Preenchido (Word)",
+                data=buffer,
+                file_name=f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            
         except Exception as e:
-            st.error(f"Erro ao processar: {e}")
+            st.error(f"❌ Erro ao gerar o documento: {e}")
+            st.info("Verifique se o arquivo 'template_contrato.docx' está na mesma pasta do aplicativo.")
