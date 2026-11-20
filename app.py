@@ -47,19 +47,17 @@ def formatar_moeda(valor):
 
 def substituir_tags(doc, dicionario_tags):
     """Substitui as tags preservando a formatação (negritos, tamanhos, etc) nos Runs"""
-    # 1. Substituir nos parágrafos normais do documento
     for p in doc.paragraphs:
-        for run in p.runs: # <-- Garante que a formatação do bloco não se perca
+        for run in p.runs:
             for tag, valor in dicionario_tags.items():
                 if tag in run.text:
                     run.text = run.text.replace(tag, str(valor))
                     
-    # 2. Substituir dentro das tabelas (como nas assinaturas)
     for tabela in doc.tables:
         for linha in tabela.rows:
             for celula in linha.cells:
                 for p in celula.paragraphs:
-                    for run in p.runs: # <-- O mesmo vale para tabelas
+                    for run in p.runs:
                         for tag, valor in dicionario_tags.items():
                             if tag in run.text:
                                 run.text = run.text.replace(tag, str(valor))
@@ -103,10 +101,8 @@ with st.form("form_contrato"):
         value="02 (duas) horas"
     )
     
-    # Valores
     valor_total = st.number_input("Valor Total (R$)", min_value=0.0, value=0.0, step=100.0)
     
-    # Cálculo automático
     sinal_calc = valor_total * 0.30
     saldo_calc = valor_total * 0.70
     
@@ -120,7 +116,7 @@ with st.form("form_contrato"):
 
     submit_button = st.form_submit_button(label="Gerar Contrato 📝")
 
-# Lógica de Geração do Documento (Apenas Word)
+# Lógica de Geração do Documento
 if submit_button:
     if not nome_noiva or not cpf:
         st.error("⚠️ Por favor, preencha pelo menos o Nome e o CPF da noiva.")
@@ -135,4 +131,40 @@ if submit_button:
                 "{{ESTADO_CIVIL}}": estado_civil.strip(),
                 "{{PROFISSAO}}": profissao.strip(),
                 "{{CPF}}": cpf.strip(),
-                "{{
+                "{{EMAIL}}": email.strip(),
+                "{{TELEFONE}}": telefone.strip(),
+                "{{ENDERECO}}": endereco.strip(),
+                "{{DATA_CASAMENTO}}": data_casamento.strip(),
+                "{{HORARIO}}": horario.strip(),
+                "{{LOCAL}}": local.strip(),
+                "{{CIDADE_EVENTO}}": cidade_evento.strip(),
+                "{{PACOTE}}": pacote,
+                "{{HORAS_ACOMPANHAMENTO}}": horas_acompanhamento.strip(),
+                "{{VALOR_TOTAL}}": formatar_moeda(valor_total),
+                "{{SINAL}}": formatar_moeda(sinal_calc),
+                "{{SALDO}}": formatar_moeda(saldo_calc),
+                "{{OBSERVACOES}}": observacoes.strip(),
+                "{{DATA_EMISSAO}}": data_emissao_formatada
+            }
+
+            doc = Document("template_contrato.docx")
+            substituir_tags(doc, tags)
+            
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+            
+            st.success("✅ Contrato Word gerado com sucesso! Clique no botão abaixo para baixar.")
+            
+            st.download_button(
+                label="⬇️ Baixar Contrato (Word)",
+                data=buffer,
+                file_name=f"Contrato_Laura_{nome_noiva.replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            
+        except Exception as e:
+            st.error(f"❌ Erro ao gerar o documento: {e}")
+            st.info("Verifique se o arquivo 'template_contrato.docx' está na mesma pasta do aplicativo.")
+
+# --- FIM DO CÓDIGO ---
