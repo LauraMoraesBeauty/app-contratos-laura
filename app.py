@@ -8,15 +8,22 @@ from datetime import datetime
 st.set_page_config(page_title="Gerador de Contratos - Laura Moraes", page_icon="✨", layout="centered")
 
 # ==========================================
-# 1. ÁREA DA LOGOMARCA (TOPO DO APLICATIVO)
+# 1. CABEÇALHO E LOGOMARCA (AGORA JUNTOS)
 # ==========================================
-# Criamos colunas para deixar a logo centralizada e num tamanho elegante
-col_vazia1, col_logo, col_vazia2 = st.columns([1, 2, 1])
+# Colocamos o título e a logo lado a lado para ficarem bem próximos e elegantes
+col_logo, col_titulo = st.columns([1, 3])
+
 with col_logo:
     if os.path.exists("logo_marca.png"):
         st.image("logo_marca.png", use_column_width=True)
     else:
-        st.info("📌 O arquivo 'logo_marca.png' não foi encontrado na pasta.")
+        st.info("📌 Logo não encontrada.")
+
+with col_titulo:
+    st.title("✨ Gerador de Contratos")
+    st.subheader("Laura Moraes Beauty")
+
+st.markdown("---")
 
 # ==========================================
 # 2. ÁREA DE FOTOS (BARRA LATERAL)
@@ -26,10 +33,10 @@ with st.sidebar:
     if os.path.exists("capa_noiva.png"):
         st.image("capa_noiva.png", caption="Laura Moraes Beauty")
     else:
-        st.info("📌 O arquivo 'capa_noiva.png' não foi encontrado na pasta.")
+        st.info("📌 O arquivo 'capa_noiva.png' não foi encontrado.")
 # ==========================================
 
-# Dicionário de meses para a data automática em português
+# Dicionário de meses para a data automática
 MESES = {
     1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
     5: "maio", 6: "junho", 7: "julho", 8: "agosto",
@@ -37,11 +44,11 @@ MESES = {
 }
 
 def formatar_moeda(valor):
-    """Formata número para o padrão de moeda brasileiro (ex: 2.500,00)"""
+    """Formata número para o padrão de moeda brasileiro"""
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def substituir_tags(doc, dicionario_tags):
-    """Substitui as tags no documento preservando a formatação (parágrafos e tabelas)"""
+    """Substitui as tags no documento preservando a formatação"""
     for p in doc.paragraphs:
         for tag, valor in dicionario_tags.items():
             if tag in p.text:
@@ -54,11 +61,6 @@ def substituir_tags(doc, dicionario_tags):
                     for tag, valor in dicionario_tags.items():
                         if tag in p.text:
                             p.text = p.text.replace(tag, str(valor))
-
-# Cabeçalho do App
-st.title("✨ Emissor de Contratos")
-st.subheader("Laura Moraes Beauty")
-st.markdown("---")
 
 # Formulário de Preenchimento
 with st.form("form_contrato"):
@@ -116,7 +118,7 @@ with st.form("form_contrato"):
     observacoes = st.text_area(
         "Observações / Adicionais Específicos", 
         value="Nenhum adicional contratado.",
-        help="Ex: Inclui taxa de deslocamento para São Miguel dos Milagres."
+        help="Ex: Inclui taxa de deslocamento."
     )
 
     submit_button = st.form_submit_button(label="Gerar Contrato 📝")
@@ -127,57 +129,11 @@ if submit_button:
         st.error("⚠️ Por favor, preencha pelo menos o Nome e o CPF da noiva.")
     else:
         try:
-            # Puxar a data automática do dia da geração do contrato
             hoje = datetime.now()
             data_emissao_formatada = f"{hoje.day} de {MESES[hoje.month]} de {hoje.year}"
             
-            # Mapeamento das tags que estão no Word
             tags = {
                 "{{NOME_NOIVA}}": nome_noiva.strip(),
                 "{{NACIONALIDADE}}": nacionalidade.strip(),
                 "{{ESTADO_CIVIL}}": estado_civil.strip(),
-                "{{PROFISSAO}}": profissao.strip(),
-                "{{CPF}}": cpf.strip(),
-                "{{EMAIL}}": email.strip(),
-                "{{TELEFONE}}": telefone.strip(),
-                "{{ENDERECO}}": endereco.strip(),
-                
-                "{{DATA_CASAMENTO}}": data_casamento.strip(),
-                "{{HORARIO}}": horario.strip(),
-                "{{LOCAL}}": local.strip(),
-                "{{CIDADE_EVENTO}}": cidade_evento.strip(),
-                
-                "{{PACOTE}}": pacote,
-                "{{HORAS_ACOMPANHAMENTO}}": horas_acompanhamento.strip(),
-                "{{VALOR_TOTAL}}": formatar_moeda(valor_total),
-                "{{SINAL}}": formatar_moeda(sinal_calc),
-                "{{SALDO}}": formatar_moeda(saldo_calc),
-                "{{OBSERVACOES}}": observacoes.strip(),
-                
-                "{{DATA_EMISSAO}}": data_emissao_formatada
-            }
-
-            # Carregar o documento Word base
-            doc = Document("template_contrato.docx")
-            
-            # Substituir as tags
-            substituir_tags(doc, tags)
-            
-            # Salvar em memória (BytesIO) para download
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-            
-            st.success("✅ Contrato gerado com sucesso!")
-            
-            # Botão de Download
-            st.download_button(
-                label="⬇️ Baixar Contrato Preenchido (Word)",
-                data=buffer,
-                file_name=f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-            
-        except Exception as e:
-            st.error(f"❌ Erro ao gerar o documento: {e}")
-            st.info("Verifique se o arquivo 'template_contrato.docx' está na mesma pasta do aplicativo.")
+                "{{PROFISSAO}}": profissao
