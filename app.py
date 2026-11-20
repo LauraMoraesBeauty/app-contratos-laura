@@ -18,7 +18,6 @@ st.markdown("""
     
     .stApp { background-color: #FCFBF9; }
     
-    /* Cor base mais escura para textos gerais */
     html, body, [class*="css"] { 
         font-family: 'Montserrat', sans-serif; 
         color: #241B19 !important; 
@@ -37,27 +36,23 @@ st.markdown("""
         padding: 2rem;
     }
 
-    /* Rótulos dos campos (Nome completo, CPF, Telefone, etc.) mais escuros e nítidos */
     label, .stTextInput label, .stSelectbox label, .stRadio label, [data-testid="stWidgetLabel"] p {
         color: #1F1615 !important;
         font-weight: 600 !important;
         font-size: 0.92rem !important;
     }
 
-    /* Texto digitado dentro das caixas e opções do rádio (PDF / Word) */
     .stTextInput input, .stSelectbox div[data-baseweb="select"] > div, .stRadio div[role="radiogroup"] label p {
         color: #1A1413 !important;
         font-weight: 500 !important;
     }
 
-    /* Caixas de texto com borda mais visível */
     .stTextInput input, .stSelectbox div[data-baseweb="select"] > div { 
         background-color: #F7F5F4 !important; 
         border: 1px solid #B8AEAB !important; 
         border-radius: 6px; 
     }
     
-    /* Botão Principal */
     div.stButton > button:first-child {
         background-color: #B08E88; 
         color: #FFFFFF !important; 
@@ -76,7 +71,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. IDENTIDADE VISUAL ---
-# Logomarca ampliada (proporção 1 : 3 : 1)
 col_logo1, col_logo2, col_logo3 = st.columns([1, 3, 1])
 with col_logo2:
     try:
@@ -84,7 +78,6 @@ with col_logo2:
     except FileNotFoundError:
         pass
 
-# Foto de Produção
 try:
     st.image("capa_noiva.png", use_container_width=True)
 except FileNotFoundError:
@@ -175,27 +168,33 @@ if submit:
         try:
             with st.spinner(f"Processando contrato em {formato_arquivo}..."):
                 doc_preenchido = preencher_contrato("template_contrato.docx", dados_noiva)
-                nome_arquivo = nome.replace(' ', '_')
+                nome_arquivo = nome.strip().replace(' ', '_')
+                
+                # Nomes dos arquivos temporários e finais alinhados
                 temp_docx = f"temp_{nome_arquivo}.docx"
+                temp_pdf_gerado = f"temp_{nome_arquivo}.pdf"
+                nome_final_pdf = f"Contrato_{nome_arquivo}.pdf"
+                nome_final_docx = f"Contrato_{nome_arquivo}.docx"
+                
                 doc_preenchido.save(temp_docx)
                 
                 if formato_arquivo == "PDF":
-                    temp_pdf = f"Contrato_{nome_arquivo}.pdf"
-                    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', temp_docx])
+                    # O LibreOffice converte temp_X.docx -> temp_X.pdf
+                    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf', temp_docx], check=True)
                     
-                    with open(temp_pdf, "rb") as pdf_file:
+                    with open(temp_pdf_gerado, "rb") as pdf_file:
                         file_bytes = pdf_file.read()
                         
                     st.success(f"Contrato de {nome} gerado com sucesso em PDF!")
                     st.download_button(
                         label="⬇️ Baixar Contrato (PDF)", 
                         data=file_bytes, 
-                        file_name=temp_pdf, 
+                        file_name=nome_final_pdf, 
                         mime="application/pdf"
                     )
                     
-                    if os.path.exists(temp_pdf): 
-                        os.remove(temp_pdf)
+                    if os.path.exists(temp_pdf_gerado): 
+                        os.remove(temp_pdf_gerado)
                     
                 else: 
                     with open(temp_docx, "rb") as docx_file:
@@ -205,7 +204,7 @@ if submit:
                     st.download_button(
                         label="⬇️ Baixar Contrato (Word)", 
                         data=file_bytes, 
-                        file_name=f"Contrato_{nome_arquivo}.docx", 
+                        file_name=nome_final_docx, 
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
                 
