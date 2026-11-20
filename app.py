@@ -79,7 +79,7 @@ with st.form("form_contrato"):
         data_casamento = st.text_input("Data do Casamento", placeholder="Ex: 15 de novembro de 2027")
         horario = st.text_input("Horário da Cerimônia", placeholder="Ex: 15:30")
     with col4:
-        local = st.text_input("Local da Produção (Making of)", placeholder="Ex: Hotel Jatiúca, Quarto 201")
+        local = st.text_input("Local da Produção (Making of)", placeholder="Ex: Hotel Jatiúca")
         cidade_evento = st.text_input("Cidade / Município do Evento", value="Maceió/AL")
 
     st.markdown("---")
@@ -92,7 +92,7 @@ with st.form("form_contrato"):
     ])
     
     horas_acompanhamento = st.text_input(
-        "Horas de Acompanhamento (Apenas para Exclusive)", 
+        "Horas de Acompanhamento (Apenas p/ Exclusive)", 
         value="02 (duas) horas"
     )
     
@@ -107,20 +107,20 @@ with st.form("form_contrato"):
     with col6:
         st.info(f"**Saldo (70%):** R$ {formatar_moeda(saldo_calc)}")
         
-    observacoes = st.text_area("Observações Específicas", value="Nenhum adicional contratado.")
+    observacoes = st.text_area("Observações Específicas", value="Nenhum adicional.")
 
     st.markdown("---")
     st.header("⚙️ Formato de Saída")
     formato_saida = st.radio(
         "Como deseja baixar o contrato?", 
-        ["Word (.docx) - Recomendado para revisão rápida", "PDF (.pdf) - Pronto para envio final"]
+        ["Word (.docx)", "PDF (.pdf)"]
     )
 
     submit_button = st.form_submit_button(label="Gerar Contrato 📝")
 
 if submit_button:
     if not nome_noiva or not cpf:
-        st.error("⚠️ Por favor, preencha pelo menos o Nome e o CPF da noiva.")
+        st.error("⚠️ Preencha pelo menos o Nome e o CPF da noiva.")
     else:
         try:
             hoje = datetime.now()
@@ -150,16 +150,16 @@ if submit_button:
 
             doc = Document("template_contrato.docx")
             substituir_tags(doc, tags)
-            nome_arquivo_base = f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}"
+            nome_arquivo_base = f"Contrato_Laura_{nome_noiva.replace(' ', '_')}"
             
             if "Word" in formato_saida:
                 buffer = BytesIO()
                 doc.save(buffer)
                 buffer.seek(0)
                 
-                st.success("✅ Contrato gerado com sucesso!")
+                st.success("✅ Contrato Word gerado com sucesso!")
                 st.download_button(
-                    label="⬇️ Baixar Contrato Preenchido (Word)",
+                    label="⬇️ Baixar Contrato (Word)",
                     data=buffer,
                     file_name=f"{nome_arquivo_base}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -169,13 +169,12 @@ if submit_button:
                 try:
                     from docx2pdf import convert
                     
-                    # Salva arquivo físico temporário para a conversão
                     temp_docx = "temp_contrato.docx"
                     temp_pdf = "temp_contrato.pdf"
                     
                     doc.save(temp_docx)
                     
-                    with st.spinner('Convertendo para PDF... Isso pode levar alguns segundos.'):
+                    with st.spinner('Convertendo para PDF... Aguarde.'):
                         convert(temp_docx, temp_pdf)
                     
                     with open(temp_pdf, "rb") as pdf_file:
@@ -183,16 +182,32 @@ if submit_button:
                         
                     st.success("✅ Contrato gerado com sucesso em PDF!")
                     st.download_button(
-                        label="⬇️ Baixar Contrato Preenchido (PDF)",
+                        label="⬇️ Baixar Contrato (PDF)",
                         data=pdf_bytes,
                         file_name=f"{nome_arquivo_base}.pdf",
                         mime="application/pdf"
                     )
                     
-                    # Limpeza dos arquivos temporários
                     if os.path.exists(temp_docx): os.remove(temp_docx)
                     if os.path.exists(temp_pdf): os.remove(temp_pdf)
                     
                 except ImportError:
-                    st.error("❌ A biblioteca 'docx2pdf' não está instalada no seu sistema.")
-                    st.info("No
+                    st.error("❌ Biblioteca docx2pdf não instalada.")
+                except Exception as e:
+                    st.error("❌ Erro ao converter PDF (limitação do servidor).")
+                    st.warning("Dica: Baixe a versão Word abaixo e salve como PDF no seu PC.")
+                    
+                    buffer = BytesIO()
+                    doc.save(buffer)
+                    buffer.seek(0)
+                    st.download_button(
+                        label="⬇️ Baixar versão Word (Emergência)",
+                        data=buffer,
+                        file_name=f"{nome_arquivo_base}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
+
+        except Exception as e:
+            st.error(f"❌ Erro ao gerar documento: {e}")
+
+# --- FIM DO CÓDIGO ---
