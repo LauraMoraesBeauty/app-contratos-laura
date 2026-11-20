@@ -7,9 +7,9 @@ from io import BytesIO
 from datetime import datetime
 
 # ==========================================
-# 🔑 SEU TOKEN DA ZAPSIGN VAI AQUI
+# 🔑 SEU TOKEN DO SANDBOX ZAPSIGN VAI AQUI
 # ==========================================
-ZAPSIGN_TOKEN = "1b8a8326-6440-469b-b8dc-f96308fab22701bf3f9a-4cde-43c9-90f3-f8ee4da18142"
+ZAPSIGN_TOKEN = "COLE_SEU_TOKEN_SANDBOX_AQUI"
 
 # Configuração da página
 st.set_page_config(page_title="Gerador de Contratos - Laura Moraes", page_icon="✨", layout="centered")
@@ -33,7 +33,11 @@ with st.sidebar:
     if os.path.exists("capa_noiva.png"):
         st.image("capa_noiva.png", caption="Laura Moraes Beauty")
 
-MESES = {1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril", 5: "maio", 6: "junho", 7: "julho", 8: "agosto", 9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"}
+MESES = {
+    1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
+    5: "maio", 6: "junho", 7: "julho", 8: "agosto",
+    9: "setembro", 10: "outubro", 11: "novembro", 12: "dezembro"
+}
 
 def formatar_moeda(valor):
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -54,25 +58,23 @@ def substituir_tags(doc, dicionario_tags):
                                 run.text = run.text.replace(tag, str(valor))
 
 def enviar_para_zapsign(buffer_docx, nome_arquivo, nome_noiva):
-    """Envia o documento para a ZapSign via API"""
-    url = f"https://api.zapsign.com.br/api/v1/docs/?api_token={ZAPSIGN_TOKEN}"
+    """Envia o documento para o ambiente Sandbox (Testes) da ZapSign"""
+    url = f"https://sandbox.api.zapsign.com.br/api/v1/docs/?api_token={ZAPSIGN_TOKEN}"
     
-    # Converte o documento Word para Base64 (formato que a API entende)
     b64_file = base64.b64encode(buffer_docx.getvalue()).decode('utf-8')
     b64_string = f"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64_file}"
     
-    # Monta o pacote de informações
     payload = {
         "name": nome_arquivo,
-        "base64_pdf": b64_string, # ZapSign aceita word aqui também
+        "base64_pdf": b64_string,
         "signers": [
             {
                 "name": nome_noiva,
-                "auth_mode": "assinatura_tela" # Noiva assina desenhando na tela
+                "auth_mode": "assinatura_tela"
             },
             {
                 "name": "Laura Moraes Beauty",
-                "auth_mode": "assinatura_tela" # Você assina desenhando na tela
+                "auth_mode": "assinatura_tela"
             }
         ]
     }
@@ -126,7 +128,7 @@ with st.form("form_contrato"):
     observacoes = st.text_area("Observações Específicas", value="Nenhum adicional contratado.")
 
     st.markdown("---")
-    enviar_zapsign = st.checkbox("✍️ Enviar contrato automaticamente para a ZapSign", value=True)
+    enviar_zapsign = st.checkbox("✍️ Enviar contrato automaticamente para a ZapSign (Modo Teste/Sandbox)", value=True)
 
     submit_button = st.form_submit_button(label="Gerar Contrato 📝")
 
@@ -181,12 +183,12 @@ if submit_button:
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
 
-            # --- INTEGRAÇÃO ZAPSIGN ---
+            # --- INTEGRAÇÃO ZAPSIGN SANDBOX ---
             if enviar_zapsign:
-                if ZAPSIGN_TOKEN == "5d5f2747-a445-45aa-8ccc-3b9a3a880ec712170f78-6c66-48e7-8d0d-89525cd119bf":
-                    st.warning("⚠️ Você marcou para enviar à ZapSign, mas esqueceu de colar o seu Token no código (Linha 9).")
+                if ZAPSIGN_TOKEN == "10baa96c-2517-473d-a37f-49eab21eb7b6331a2df2-bd74-44a5-ab18-b3b2193194cc":
+                    st.warning("⚠️ Você marcou para enviar à ZapSign, mas esqueceu de colar o seu Token do Sandbox no código (Linha 11).")
                 else:
-                    with st.spinner("Enviando contrato para a ZapSign..."):
+                    with st.spinner("Enviando contrato para o Sandbox da ZapSign..."):
                         resposta = enviar_para_zapsign(buffer, nome_arquivo_base, nome_noiva)
                         
                         if resposta.status_code == 200:
@@ -195,15 +197,15 @@ if submit_button:
                             link_laura = dados['signers'][1]['sign_url']
                             
                             st.markdown("---")
-                            st.header("✍️ Links de Assinatura (ZapSign)")
+                            st.header("✍️ Links de Assinatura (Sandbox Teste)")
                             
-                            st.success("Documento criado na ZapSign com sucesso!")
+                            st.success("Documento criado no ambiente de testes com sucesso!")
                             
                             st.text_input("🔗 Link para mandar no WhatsApp da NOIVA:", value=link_noiva)
-                            st.markdown(f"[➡️ Clique aqui para abrir o link da Noiva]({link_noiva})")
+                            st.markdown(f"[➡️ Clique aqui para testar o link da Noiva]({link_noiva})")
                             
                             st.text_input("🔗 Link para VOCÊ assinar:", value=link_laura)
-                            st.markdown(f"[➡️ Clique aqui para abrir o seu link]({link_laura})")
+                            st.markdown(f"[➡️ Clique aqui para testar o seu link]({link_laura})")
                             
                         else:
                             st.error(f"Erro ao integrar com ZapSign. Código: {resposta.status_code}")
