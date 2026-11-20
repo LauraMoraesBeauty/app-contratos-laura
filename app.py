@@ -9,7 +9,7 @@ from datetime import datetime
 # ==========================================
 # 🔑 SEU TOKEN DO SANDBOX ZAPSIGN VAI AQUI
 # ==========================================
-ZAPSIGN_TOKEN = "343d9d68-b5ba-4b73-a14d-f93e054c8f51"
+ZAPSIGN_TOKEN = "10baa96c-2517-473d-a37f-49eab21eb7b6331a2df2-bd74-44a5-ab18-b3b2193194cc"
 
 # Configuração da página
 st.set_page_config(page_title="Gerador de Contratos - Laura Moraes", page_icon="✨", layout="centered")
