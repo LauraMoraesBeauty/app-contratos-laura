@@ -8,9 +8,8 @@ from datetime import datetime
 st.set_page_config(page_title="Gerador de Contratos - Laura Moraes", page_icon="✨", layout="centered")
 
 # ==========================================
-# 1. CABEÇALHO E LOGOMARCA (AGORA JUNTOS)
+# 1. CABEÇALHO E LOGOMARCA
 # ==========================================
-# Colocamos o título e a logo lado a lado para ficarem bem próximos e elegantes
 col_logo, col_titulo = st.columns([1, 3])
 
 with col_logo:
@@ -36,7 +35,6 @@ with st.sidebar:
         st.info("📌 O arquivo 'capa_noiva.png' não foi encontrado.")
 # ==========================================
 
-# Dicionário de meses para a data automática
 MESES = {
     1: "janeiro", 2: "fevereiro", 3: "março", 4: "abril",
     5: "maio", 6: "junho", 7: "julho", 8: "agosto",
@@ -44,11 +42,9 @@ MESES = {
 }
 
 def formatar_moeda(valor):
-    """Formata número para o padrão de moeda brasileiro"""
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def substituir_tags(doc, dicionario_tags):
-    """Substitui as tags no documento preservando a formatação"""
     for p in doc.paragraphs:
         for tag, valor in dicionario_tags.items():
             if tag in p.text:
@@ -62,7 +58,6 @@ def substituir_tags(doc, dicionario_tags):
                         if tag in p.text:
                             p.text = p.text.replace(tag, str(valor))
 
-# Formulário de Preenchimento
 with st.form("form_contrato"):
     st.header("👰 Dados da Contratante")
     col1, col2 = st.columns(2)
@@ -97,15 +92,12 @@ with st.form("form_contrato"):
     ])
     
     horas_acompanhamento = st.text_input(
-        "Horas de Acompanhamento (Apenas para Exclusive Bride)", 
-        value="02 (duas) horas",
-        help="Altere apenas se negociar um tempo diferente."
+        "Horas de Acompanhamento (Apenas para Exclusive)", 
+        value="02 (duas) horas"
     )
     
-    # Valores
     valor_total = st.number_input("Valor Total (R$)", min_value=0.0, value=0.0, step=100.0)
     
-    # Cálculo automático do Sinal (30%) e Saldo (70%)
     sinal_calc = valor_total * 0.30
     saldo_calc = valor_total * 0.70
     
@@ -115,15 +107,17 @@ with st.form("form_contrato"):
     with col6:
         st.info(f"**Saldo (70%):** R$ {formatar_moeda(saldo_calc)}")
         
-    observacoes = st.text_area(
-        "Observações / Adicionais Específicos", 
-        value="Nenhum adicional contratado.",
-        help="Ex: Inclui taxa de deslocamento."
+    observacoes = st.text_area("Observações Específicas", value="Nenhum adicional contratado.")
+
+    st.markdown("---")
+    st.header("⚙️ Formato de Saída")
+    formato_saida = st.radio(
+        "Como deseja baixar o contrato?", 
+        ["Word (.docx) - Recomendado para revisão rápida", "PDF (.pdf) - Pronto para envio final"]
     )
 
     submit_button = st.form_submit_button(label="Gerar Contrato 📝")
 
-# Lógica de Geração do Documento
 if submit_button:
     if not nome_noiva or not cpf:
         st.error("⚠️ Por favor, preencha pelo menos o Nome e o CPF da noiva.")
@@ -141,40 +135,64 @@ if submit_button:
                 "{{EMAIL}}": email.strip(),
                 "{{TELEFONE}}": telefone.strip(),
                 "{{ENDERECO}}": endereco.strip(),
-                
                 "{{DATA_CASAMENTO}}": data_casamento.strip(),
                 "{{HORARIO}}": horario.strip(),
                 "{{LOCAL}}": local.strip(),
                 "{{CIDADE_EVENTO}}": cidade_evento.strip(),
-                
                 "{{PACOTE}}": pacote,
                 "{{HORAS_ACOMPANHAMENTO}}": horas_acompanhamento.strip(),
                 "{{VALOR_TOTAL}}": formatar_moeda(valor_total),
                 "{{SINAL}}": formatar_moeda(sinal_calc),
                 "{{SALDO}}": formatar_moeda(saldo_calc),
                 "{{OBSERVACOES}}": observacoes.strip(),
-                
                 "{{DATA_EMISSAO}}": data_emissao_formatada
             }
 
             doc = Document("template_contrato.docx")
             substituir_tags(doc, tags)
+            nome_arquivo_base = f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}"
             
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
+            if "Word" in formato_saida:
+                buffer = BytesIO()
+                doc.save(buffer)
+                buffer.seek(0)
+                
+                st.success("✅ Contrato gerado com sucesso!")
+                st.download_button(
+                    label="⬇️ Baixar Contrato Preenchido (Word)",
+                    data=buffer,
+                    file_name=f"{nome_arquivo_base}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
             
-            st.success("✅ Contrato gerado com sucesso!")
-            
-            st.download_button(
-                label="⬇️ Baixar Contrato Preenchido (Word)",
-                data=buffer,
-                file_name=f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-            
-        except Exception as e:
-            st.error(f"❌ Erro ao gerar o documento: {e}")
-            st.info("Verifique se o arquivo 'template_contrato.docx' está na mesma pasta do aplicativo.")
-
-# --- FIM DO CÓDIGO ---
+            elif "PDF" in formato_saida:
+                try:
+                    from docx2pdf import convert
+                    
+                    # Salva arquivo físico temporário para a conversão
+                    temp_docx = "temp_contrato.docx"
+                    temp_pdf = "temp_contrato.pdf"
+                    
+                    doc.save(temp_docx)
+                    
+                    with st.spinner('Convertendo para PDF... Isso pode levar alguns segundos.'):
+                        convert(temp_docx, temp_pdf)
+                    
+                    with open(temp_pdf, "rb") as pdf_file:
+                        pdf_bytes = pdf_file.read()
+                        
+                    st.success("✅ Contrato gerado com sucesso em PDF!")
+                    st.download_button(
+                        label="⬇️ Baixar Contrato Preenchido (PDF)",
+                        data=pdf_bytes,
+                        file_name=f"{nome_arquivo_base}.pdf",
+                        mime="application/pdf"
+                    )
+                    
+                    # Limpeza dos arquivos temporários
+                    if os.path.exists(temp_docx): os.remove(temp_docx)
+                    if os.path.exists(temp_pdf): os.remove(temp_pdf)
+                    
+                except ImportError:
+                    st.error("❌ A biblioteca 'docx2pdf' não está instalada no seu sistema.")
+                    st.info("No
