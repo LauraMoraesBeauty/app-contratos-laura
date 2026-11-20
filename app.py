@@ -4,7 +4,31 @@ from io import BytesIO
 from datetime import datetime
 
 # Configuração da página
-st.set_page_config(page_title="Gerador de Contratos - Laura Moraes Beauty", page_icon="✨", layout="centered")
+st.set_page_config(page_title="Gerador de Contratos - Laura Moraes", page_icon="✨", layout="centered")
+
+# ==========================================
+# 1. ÁREA DA LOGOMARCA (TOPO DO APLICATIVO)
+# ==========================================
+# Criamos colunas para deixar a logo centralizada e num tamanho elegante
+col_vazia1, col_logo, col_vazia2 = st.columns([1, 2, 1])
+with col_logo:
+    try:
+        # Puxando a logo com o nome real
+        st.image("logo_marca.png", use_column_width=True)
+    except FileNotFoundError:
+        st.info("📌 O arquivo 'logo_marca.png' não foi encontrado na pasta.")
+
+# ==========================================
+# 2. ÁREA DE FOTOS (BARRA LATERAL)
+# ==========================================
+with st.sidebar:
+    st.header("📸 Portfólio / Inspirações")
+    try:
+        # Puxando a foto com o nome real
+        st.image("capa_noiva.jpg", caption="Laura Moraes Beauty")
+    except FileNotFoundError:
+        st.info("📌 O arquivo 'capa_noiva.jpg' não foi encontrado na pasta.")
+# ==========================================
 
 # Dicionário de meses para a data automática em português
 MESES = {
@@ -19,15 +43,11 @@ def formatar_moeda(valor):
 
 def substituir_tags(doc, dicionario_tags):
     """Substitui as tags no documento preservando a formatação (parágrafos e tabelas)"""
-    # Substituir em parágrafos normais
     for p in doc.paragraphs:
         for tag, valor in dicionario_tags.items():
             if tag in p.text:
-                # O replace direto no text perde formatação fina, mas para tags inteiras 
-                # costuma funcionar bem. Para garantir, substituímos no texto do parágrafo.
                 p.text = p.text.replace(tag, str(valor))
                 
-    # Substituir em tabelas (como a tabela de assinaturas)
     for tabela in doc.tables:
         for linha in tabela.rows:
             for celula in linha.cells:
@@ -114,51 +134,4 @@ if submit_button:
             
             # Mapeamento das tags que estão no Word
             tags = {
-                "{{NOME_NOIVA}}": nome_noiva.strip(),
-                "{{NACIONALIDADE}}": nacionalidade.strip(),
-                "{{ESTADO_CIVIL}}": estado_civil.strip(),
-                "{{PROFISSAO}}": profissao.strip(),
-                "{{CPF}}": cpf.strip(),
-                "{{EMAIL}}": email.strip(),
-                "{{TELEFONE}}": telefone.strip(),
-                "{{ENDERECO}}": endereco.strip(),
-                
-                "{{DATA_CASAMENTO}}": data_casamento.strip(),
-                "{{HORARIO}}": horario.strip(),
-                "{{LOCAL}}": local.strip(),
-                "{{CIDADE_EVENTO}}": cidade_evento.strip(),
-                
-                "{{PACOTE}}": pacote,
-                "{{HORAS_ACOMPANHAMENTO}}": horas_acompanhamento.strip(),
-                "{{VALOR_TOTAL}}": formatar_moeda(valor_total),
-                "{{SINAL}}": formatar_moeda(sinal_calc),
-                "{{SALDO}}": formatar_moeda(saldo_calc),
-                "{{OBSERVACOES}}": observacoes.strip(),
-                
-                "{{DATA_EMISSAO}}": data_emissao_formatada
-            }
-
-            # Carregar o documento Word base
-            doc = Document("template_contrato.docx")
-            
-            # Substituir as tags
-            substituir_tags(doc, tags)
-            
-            # Salvar em memória (BytesIO) para download
-            buffer = BytesIO()
-            doc.save(buffer)
-            buffer.seek(0)
-            
-            st.success("✅ Contrato gerado com sucesso!")
-            
-            # Botão de Download
-            st.download_button(
-                label="⬇️ Baixar Contrato Preenchido (Word)",
-                data=buffer,
-                file_name=f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-            
-        except Exception as e:
-            st.error(f"❌ Erro ao gerar o documento: {e}")
-            st.info("Verifique se o arquivo 'template_contrato.docx' está na mesma pasta do aplicativo.")
+                "{{NOME_NOIVA}}": nome_no
