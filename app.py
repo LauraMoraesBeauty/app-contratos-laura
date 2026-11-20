@@ -134,4 +134,51 @@ if submit_button:
             
             # Mapeamento das tags que estão no Word
             tags = {
-                "{{NOME_NOIVA}}": nome_no
+                "{{NOME_NOIVA}}": nome_noiva.strip(),
+                "{{NACIONALIDADE}}": nacionalidade.strip(),
+                "{{ESTADO_CIVIL}}": estado_civil.strip(),
+                "{{PROFISSAO}}": profissao.strip(),
+                "{{CPF}}": cpf.strip(),
+                "{{EMAIL}}": email.strip(),
+                "{{TELEFONE}}": telefone.strip(),
+                "{{ENDERECO}}": endereco.strip(),
+                
+                "{{DATA_CASAMENTO}}": data_casamento.strip(),
+                "{{HORARIO}}": horario.strip(),
+                "{{LOCAL}}": local.strip(),
+                "{{CIDADE_EVENTO}}": cidade_evento.strip(),
+                
+                "{{PACOTE}}": pacote,
+                "{{HORAS_ACOMPANHAMENTO}}": horas_acompanhamento.strip(),
+                "{{VALOR_TOTAL}}": formatar_moeda(valor_total),
+                "{{SINAL}}": formatar_moeda(sinal_calc),
+                "{{SALDO}}": formatar_moeda(saldo_calc),
+                "{{OBSERVACOES}}": observacoes.strip(),
+                
+                "{{DATA_EMISSAO}}": data_emissao_formatada
+            }
+
+            # Carregar o documento Word base
+            doc = Document("template_contrato.docx")
+            
+            # Substituir as tags
+            substituir_tags(doc, tags)
+            
+            # Salvar em memória (BytesIO) para download
+            buffer = BytesIO()
+            doc.save(buffer)
+            buffer.seek(0)
+            
+            st.success("✅ Contrato gerado com sucesso!")
+            
+            # Botão de Download
+            st.download_button(
+                label="⬇️ Baixar Contrato Preenchido (Word)",
+                data=buffer,
+                file_name=f"Contrato_Laura_Moraes_{nome_noiva.replace(' ', '_')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+            
+        except Exception as e:
+            st.error(f"❌ Erro ao gerar o documento: {e}")
+            st.info("Verifique se o arquivo 'template_contrato.docx' está na mesma pasta do aplicativo.")
